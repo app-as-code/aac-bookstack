@@ -1,0 +1,154 @@
+service:
+  name: aac-bookstack
+  description: Dokumentations-Wiki für Notizen und Anleitungen.
+  category: Documentation
+  icon: bookstack.png
+  hostname: bookstack
+  image_repo: lscr.io/linuxserver/bookstack
+  image_tag: v25.12.8-ls250
+  stage: prod
+ports:
+- name: web
+  port: 80
+  external_port: 28226
+config:
+  domain_name: example.com
+  generate_hostname: false
+  integrations:
+    homepage:
+      enabled: true
+    autodns:
+      enabled: true
+      create_wildcard: true
+    traefik:
+      enabled: true
+      cert_resolver: ionos
+      entrypoint: websecure
+  schema_version: 2
+stage_overrides:
+  prod:
+    service:
+      hostname: bookstack
+    config:
+      generate_hostname: false
+secrets:
+  MAIL_PASSWORD: CHANGE_ME
+  APP_KEY: CHANGE_ME
+  DB_PASSWORD: CHANGE_ME
+  OIDC_CLIENT_ID: CHANGE_ME
+  OIDC_CLIENT_SECRET: CHANGE_ME
+  MARIADB_DATABASE: bookstack
+  MARIADB_USER: bookstack
+  MARIADB_PASSWORD: CHANGE_ME
+  MARIADB_ROOT_PASSWORD: CHANGE_ME
+volumes:
+  config:
+    description: Bookstack Configuration Volume
+  db:
+    description: Data for database
+deployment_strategy:
+  main:
+    enabled: true
+    target_stage: prod
+  dev:
+    enabled: true
+    target_stage: dev
+  test:
+    enabled: false
+    target_stage: test
+  ansible-dev:
+    enabled: true
+    target_stage: dev
+  iac-dev:
+    enabled: true
+    target_stage: dev
+  template-dev:
+    enabled: true
+    target_stage: dev
+deployments:
+  docker_compose:
+    host_base_path: /export/docker
+    restart_policy: unless-stopped
+    volumes:
+    - config:/config
+    environment:
+      OIDC_ISSUER_DISCOVER: '{{ vars.OIDC_ISSUER_DISCOVER }}'
+      PUID: '{{ vars.PUID }}'
+      MAIL_PASSWORD: '{{ secrets.MAIL_PASSWORD }}'
+      MAIL_FROM_NAME: '{{ vars.MAIL_FROM_NAME }}'
+      MAIL_ENCRYPTION: '{{ vars.MAIL_ENCRYPTION }}'
+      MAIL_HOST: '{{ vars.MAIL_HOST }}'
+      PGID: '{{ vars.PGID }}'
+      APP_PROXIES: '{{ vars.APP_PROXIES }}'
+      OIDC_NAME: '{{ vars.OIDC_NAME }}'
+      AUTH_AUTO_INITIATE: '{{ vars.AUTH_AUTO_INITIATE }}'
+      AUTH_METHOD: '{{ vars.AUTH_METHOD }}'
+      OIDC_REMOVE_FROM_GROUPS: '{{ vars.OIDC_REMOVE_FROM_GROUPS }}'
+      MAIL_DRIVER: '{{ vars.MAIL_DRIVER }}'
+      OIDC_GROUPS_CLAIM: '{{ vars.OIDC_GROUPS_CLAIM }}'
+      OIDC_END_SESSION_ENDPOINT: '{{ vars.OIDC_END_SESSION_ENDPOINT }}'
+      MAIL_USERNAME: '{{ vars.MAIL_USERNAME }}'
+      APP_URL: '{{ vars.APP_URL }}'
+      OIDC_DISPLAY_NAME_ATTRIBUTES: '{{ vars.OIDC_DISPLAY_NAME_ATTRIBUTES }}'
+      OIDC_ISSUER: '{{ vars.OIDC_ISSUER }}'
+      TZ: '{{ vars.TZ }}'
+      DB_USERNAME: '{{ vars.DB_USERNAME }}'
+      DB_PORT: '{{ vars.DB_PORT }}'
+      OIDC_EMAIL_ATTRIBUTE: '{{ vars.OIDC_EMAIL_ATTRIBUTE }}'
+      DB_HOST: '{{ vars.DB_HOST }}'
+      DB_DATABASE: '{{ vars.DB_DATABASE }}'
+      MAIL_FROM: '{{ vars.MAIL_FROM }}'
+      MAIL_PORT: '{{ vars.MAIL_PORT }}'
+      OIDC_USER_TO_GROUPS: '{{ vars.OIDC_USER_TO_GROUPS }}'
+      OIDC_ADDITIONAL_SCOPES: '{{ vars.OIDC_ADDITIONAL_SCOPES }}'
+      APP_KEY: '{{ secrets.APP_KEY }}'
+      DB_PASSWORD: '{{ secrets.DB_PASSWORD }}'
+      OIDC_CLIENT_ID: '{{ secrets.OIDC_CLIENT_ID }}'
+      OIDC_CLIENT_SECRET: '{{ secrets.OIDC_CLIENT_SECRET }}'
+      MARIADB_DATABASE: '{{ secrets.MARIADB_DATABASE }}'
+      MARIADB_USER: '{{ secrets.MARIADB_USER }}'
+      MARIADB_PASSWORD: '{{ secrets.MARIADB_PASSWORD }}'
+      MARIADB_ROOT_PASSWORD: '{{ secrets.MARIADB_ROOT_PASSWORD }}'
+dependencies:
+  database:
+    import: catalog/mariadb.yml
+    overrides:
+      name: aac-bookstack-db
+      image_tag: 12.3.1-ubi10-rc
+      volumes:
+        db:
+          target: /var/lib/mysql
+          description: Persistent storage for db
+      environment:
+        PUID: '{{ vars.PUID }}'
+        PGID: '{{ vars.PGID }}'
+        TZ: '{{ vars.TZ }}'
+vars:
+  OIDC_ISSUER_DISCOVER: 'true'
+  PUID: '1000'
+  MAIL_FROM_NAME: BookStack
+  MAIL_ENCRYPTION: tls
+  MAIL_HOST: bookstack.example.com
+  PGID: '1000'
+  APP_PROXIES: '*'
+  OIDC_NAME: authentik
+  AUTH_AUTO_INITIATE: 'true'
+  AUTH_METHOD: oidc
+  OIDC_REMOVE_FROM_GROUPS: 'true'
+  MAIL_DRIVER: smtp
+  OIDC_GROUPS_CLAIM: groups
+  OIDC_END_SESSION_ENDPOINT: CHANGE_ME
+  MAIL_USERNAME: CHANGE_ME
+  APP_URL: https://bookstack.example.com
+  OIDC_DISPLAY_NAME_ATTRIBUTES: name
+  OIDC_ISSUER: https://bookstack.example.com
+  TZ: Europe/Berlin
+  DB_USERNAME: bookstack
+  DB_PORT: '3306'
+  OIDC_EMAIL_ATTRIBUTE: email
+  DB_HOST: bookstack.example.com
+  DB_DATABASE: bookstack
+  MAIL_FROM: CHANGE_ME
+  MAIL_PORT: '465'
+  OIDC_USER_TO_GROUPS: 'true'
+  OIDC_ADDITIONAL_SCOPES: groups

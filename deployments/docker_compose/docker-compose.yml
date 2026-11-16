@@ -1,0 +1,129 @@
+services:
+  # --- Main Application Service ---
+  aac-bookstack:
+    image: "lscr.io/linuxserver/bookstack:v25.12.8-ls250"
+    container_name: "aac-bookstack"
+    hostname: "bookstack"
+    restart: "unless-stopped"
+
+
+    environment:
+      OIDC_ISSUER_DISCOVER: "true"
+      PUID: "1000"
+      MAIL_PASSWORD: "${MAIL_PASSWORD:?set MAIL_PASSWORD in .env (see .env.example)}"
+      MAIL_FROM_NAME: "BookStack"
+      MAIL_ENCRYPTION: "tls"
+      MAIL_HOST: "bookstack.example.com"
+      PGID: "1000"
+      APP_PROXIES: "*"
+      OIDC_NAME: "authentik"
+      AUTH_AUTO_INITIATE: "true"
+      AUTH_METHOD: "oidc"
+      OIDC_REMOVE_FROM_GROUPS: "true"
+      MAIL_DRIVER: "smtp"
+      OIDC_GROUPS_CLAIM: "groups"
+      OIDC_END_SESSION_ENDPOINT: "${OIDC_END_SESSION_ENDPOINT:?set OIDC_END_SESSION_ENDPOINT in .env (see .env.example)}"
+      MAIL_USERNAME: "${MAIL_USERNAME:?set MAIL_USERNAME in .env (see .env.example)}"
+      APP_URL: "https://bookstack.example.com"
+      OIDC_DISPLAY_NAME_ATTRIBUTES: "name"
+      OIDC_ISSUER: "https://bookstack.example.com"
+      TZ: "Europe/Berlin"
+      DB_USERNAME: "bookstack"
+      DB_PORT: "3306"
+      OIDC_EMAIL_ATTRIBUTE: "email"
+      DB_HOST: "bookstack.example.com"
+      DB_DATABASE: "bookstack"
+      MAIL_FROM: "${MAIL_FROM:?set MAIL_FROM in .env (see .env.example)}"
+      MAIL_PORT: "465"
+      OIDC_USER_TO_GROUPS: "true"
+      OIDC_ADDITIONAL_SCOPES: "groups"
+      APP_KEY: "${APP_KEY:?set APP_KEY in .env (see .env.example)}"
+      DB_PASSWORD: "${DB_PASSWORD:?set DB_PASSWORD in .env (see .env.example)}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:?set OIDC_CLIENT_ID in .env (see .env.example)}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:?set OIDC_CLIENT_SECRET in .env (see .env.example)}"
+      MARIADB_DATABASE: "bookstack"
+      MARIADB_USER: "bookstack"
+      MARIADB_PASSWORD: "${MARIADB_PASSWORD:?set MARIADB_PASSWORD in .env (see .env.example)}"
+      MARIADB_ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD:?set MARIADB_ROOT_PASSWORD in .env (see .env.example)}"
+    ports:
+      - "28226:80/tcp"
+
+    volumes:
+      - "/export/docker/aac-bookstack/config:/config"
+
+    networks:
+      - exposed
+      - interconnect
+      - secured
+      - stack_internal
+
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.aac-bookstack.rule: "Host(`bookstack.example.com`)"
+      traefik.http.routers.aac-bookstack.entrypoints: "websecure"
+      traefik.http.routers.aac-bookstack.tls: "true"
+      traefik.http.routers.aac-bookstack.tls.certresolver: "ionos"
+      traefik.docker.network: "services-secured"
+      traefik.http.services.aac-bookstack.loadbalancer.server.port: "80"
+      traefik.http.services.aac-bookstack.loadbalancer.server.scheme: "http"
+      auto-dns.createWildcard.aac-bookstack: "true"
+      auto-dns.customDNS.aac-bookstack: "true"
+      auto-dns.customDOMAIN.aac-bookstack: "example.com"
+      auto-dns.customHost.aac-bookstack: "bookstack"
+      homepage.group: "Documentation"
+      homepage.name: "Bookstack"
+      homepage.href: "https://bookstack.example.com"
+      homepage.icon: "bookstack.png"
+      homepage.description: "Dokumentations-Wiki für Notizen und Anleitungen."
+
+
+    depends_on:
+      aac-bookstack-db:
+        condition: service_healthy
+
+
+  # --- Service Dependencies (Sidecars) ---
+  aac-bookstack-db:
+    image: "mariadb:12.3.1-ubi10-rc"
+    container_name: "aac-bookstack-db"
+    restart: "always"
+    
+
+    env_file:
+      - .env
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "Europe/Berlin"
+
+
+    volumes:
+      - "/export/docker/aac-bookstack/db:/var/lib/mysql"
+
+    networks:
+      - stack_internal
+
+
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost --silent || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+
+
+networks:
+  secured:
+    name: "services-secured"
+    external: true
+  exposed:
+    name: "services-exposed"
+    external: true
+  interconnect:
+    name: "docker-default"
+    external: true
+  stack_internal:
+    name: "aac-bookstack_stack_internal"
+    driver: "bridge"
+
